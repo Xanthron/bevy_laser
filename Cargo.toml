@@ -1,0 +1,14 @@
+[package]
+name = "bevy_init"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# default bevy version. In crease incase of new version.
+bevy = { version = "0.5", features = ["dynamic"] }
+
+[patch.crates-io]
+# patch the the default bevy version with lates changes.
+bevy = { git = "https://github.com/bevyengine/bevy" }
+# In case of a local version comment out the line above and uncomment the line below.
+# bevy = { path = "../bevy" }
