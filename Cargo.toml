@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 # default bevy version. In crease incase of new version.
 bevy = { version = "0.5", features = ["dynamic"] }
+rand = "0.8"
 
 [patch.crates-io]
 # patch the the default bevy version with lates changes.
