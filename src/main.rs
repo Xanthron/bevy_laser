@@ -28,6 +28,7 @@ fn main() {
         .add_plugin(click::ClickablePlugin)
         .add_plugin(player::MovementPlugin)
         .add_plugin(element::ElementPlugin)
+        .add_plugin(laser::LaserPlugin)
         .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.1)))
         .insert_resource(GameStateRes::GenerateNext)
         .run();

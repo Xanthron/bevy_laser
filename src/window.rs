@@ -2,7 +2,7 @@ use bevy::{prelude::*, window::WindowResizeConstraints};
 
 pub const ROWS: f32 = 16.0;
 pub const COLUMNS: f32 = 9.0;
-pub const SIZE_MULTIPLIER: f32 = 30.0;
+pub const SIZE_MULTIPLIER: f32 = 20.0;
 pub const SIZE: f32 = SIZE_MULTIPLIER * 2.0;
 
 pub const WIDTH: f32 = COLUMNS * SIZE_MULTIPLIER * 2.0;
@@ -11,7 +11,6 @@ pub const HEIGHT: f32 = ROWS * SIZE_MULTIPLIER * 2.0;
 pub struct WindowPlugin;
 impl Plugin for WindowPlugin {
     fn build(&self, app: &mut App) {
-        println!("Init Window");
         app.insert_resource(WindowDescriptor {
             width: WIDTH,
             height: HEIGHT,
@@ -29,6 +28,7 @@ impl Plugin for WindowPlugin {
             cursor_visible: true,
             cursor_locked: false,
             mode: bevy::window::WindowMode::Windowed,
+            ..Default::default()
         });
     }
 }

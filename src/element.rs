@@ -2,6 +2,7 @@ use bevy::{ecs::schedule::ShouldRun, prelude::*};
 use rand::prelude::*;
 
 use crate::{
+    collider2d::{self, Collider},
     window::{get_3d_from_cord, COLUMNS, HEIGHT, ROWS, SIZE, SIZE_MULTIPLIER, WIDTH},
     GameStateRes,
 };
@@ -153,6 +154,7 @@ fn spawn_block_system(
                 transform: Transform::from_translation(animation_move_down.destination),
                 ..Default::default()
             })
+            .insert(collider2d::Block::new_collider(Vec2::new(SIZE, SIZE)))
             .with_children(|parent| {
                 parent.spawn_bundle(SpriteBundle {
                     sprite: Sprite::new((SIZE * 0.85, SIZE * 0.85).into()),

@@ -8,9 +8,10 @@ impl Collider {
         transform: &Transform,
         pos: Vec2,
         direction: Vec2,
-    ) -> Option<(Vec2, f32)> {
+    ) -> Option<(Vec2, Vec2)> {
         let mut vec_iter = self.0.iter();
-        let first = *vec_iter.next().unwrap() + Vec2::from(transform.translation);
+        let translation = Vec2::from(transform.translation);
+        let first = *vec_iter.next().unwrap() + translation;
         let mut last = first;
 
         let mut min_distance_squared = f32::MAX;
@@ -18,7 +19,7 @@ impl Collider {
         let mut ret = None;
 
         for vec in vec_iter {
-            let vec = *vec + Vec2::from(transform.translation);
+            let vec = *vec + translation;
             if let Some(hit) = line_line_intersection(pos, pos + direction, last, vec) {
                 ray_hit(
                     pos,
@@ -118,16 +119,18 @@ fn ray_hit(
     a1: Vec2,
     a2: Vec2,
     min_distance_squared: &mut f32,
-    value: &mut Option<(Vec2, f32)>,
+    value: &mut Option<(Vec2, Vec2)>,
 ) {
     if line_direction(dir, hit - pos) >= 0.0 {
         let a = a2 - a1;
         let line_dir = line_direction(a2 - a1, hit - a1);
+        info!("{}", line_dir);
         if line_dir >= 0.0 && line_dir <= 1.0 {
             let distance_squared = pos.distance_squared(hit);
             if distance_squared < *min_distance_squared {
                 *min_distance_squared = distance_squared;
-                *value = Some((hit, a.angle_between(dir)));
+
+                *value = Some((hit, Vec2::new(a.y, -a.x).normalize()));
             }
         }
     }
@@ -150,12 +153,12 @@ fn test_line_line_intersection() {
 fn test_collider() {
     let collider = Block::new_collider((2.0, 2.0).into());
 
-    println!(
-        "{:?}",
+    assert_eq!(
+        Some((Vec2::new(1.0, 1.5), Vec2::new(-1.0, 0.0))),
         collider.ray_collide(
             &Transform::from_xyz(2.0, 2.0, 0.0),
             Vec2::new(0.0, 1.0),
             Vec2::new(1.0, 0.5),
-        )
+        ),
     );
 }
