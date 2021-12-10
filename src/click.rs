@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::camera::OrthographicProjection};
+use bevy::{math::Vec3Swizzles, prelude::*, render::camera::OrthographicProjection};
 
 use crate::MainCamera;
 
@@ -77,7 +77,7 @@ fn hover_2d_system(
         if let Ok((camera_transform, orthographic_projection)) = query_camera.get_single() {
             let cursor_pos = cursor_moved.position
                 + Vec2::new(orthographic_projection.left, orthographic_projection.bottom)
-                + Vec2::from(camera_transform.translation);
+                + camera_transform.translation.xy();
 
             //FIXME Rotation and Scale not implemented
             //FIXME No blocking. Solution: Order query by z

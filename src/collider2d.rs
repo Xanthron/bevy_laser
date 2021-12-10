@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{math::Vec3Swizzles, prelude::*};
 
 #[derive(Component)]
 pub struct Collider(Vec<Vec2>);
@@ -10,7 +10,7 @@ impl Collider {
         direction: Vec2,
     ) -> Option<(Vec2, Vec2)> {
         let mut vec_iter = self.0.iter();
-        let translation = Vec2::from(transform.translation);
+        let translation = transform.translation.xy();
         let first = *vec_iter.next().unwrap() + translation;
         let mut last = first;
 

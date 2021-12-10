@@ -1,13 +1,10 @@
 use crate::{
     collider2d::Collider,
-    player::{Cannon, Player},
+    player::Cannon,
     window::{HEIGHT, WIDTH},
     GameStateRes,
 };
-use bevy::{
-    ecs::{query, schedule::ShouldRun, system::Command},
-    prelude::*,
-};
+use bevy::{ecs::schedule::ShouldRun, math::Vec3Swizzles, prelude::*};
 
 pub const AIMING_LASERS: usize = 3;
 
@@ -91,7 +88,7 @@ fn aiming_system(
     mut query_laser: Query<&mut Laser, With<Aiming>>,
 ) {
     let (global_transform_cannon, transform_cannon) = query_cannon.single();
-    let mut pos = Vec2::from(global_transform_cannon.translation + transform_cannon.translation);
+    let mut pos = global_transform_cannon.translation.xy() + transform_cannon.translation.xy();
     let a = transform_cannon.rotation.to_axis_angle().1;
     let a_cos = a.cos();
     let a_sin = a.sin();

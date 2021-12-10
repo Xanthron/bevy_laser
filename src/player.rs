@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use bevy::{ecs::schedule::ShouldRun, prelude::*};
+use bevy::{ecs::schedule::ShouldRun, math::Vec3Swizzles, prelude::*};
 
 use crate::{
     click::{self, Clicked},
@@ -118,7 +118,7 @@ pub fn cannon_mouse_rotation_system(
 
         let cursor_pos: Vec2 = cursor_move.position;
         let cannon_pos: Vec2 =
-            Vec2::from(global_transform.translation) + Vec2::new(WIDTH / 2.0, HEIGHT / 2.0);
+            global_transform.translation.xy() + Vec2::new(WIDTH / 2.0, HEIGHT / 2.0);
         let vec = cursor_pos - cannon_pos;
         let mut angle = Vec2::new(0.0, 1.0).angle_between(vec);
 
