@@ -4,11 +4,16 @@ use crate::{
     window::{HEIGHT, WIDTH},
     GameStateRes,
 };
-use bevy::{ecs::schedule::ShouldRun, math::Vec3Swizzles, prelude::*};
+use bevy::{
+    ecs::schedule::ShouldRun,
+    math::{Mat2, Vec3Swizzles},
+    prelude::*,
+};
 
-pub const AIMING_LASERS: usize = 3;
+pub const AIMING_LASERS: usize = 500;
 
-pub const MAX_LASER_LENGTH: f32 = WIDTH * WIDTH + HEIGHT * HEIGHT; //FIXME take the square root but that is not supported vor const.
+pub const MAX_LASER_LENGTH: f32 = WIDTH * WIDTH + HEIGHT * HEIGHT; //FIXME take the square root but that is not supported for const.
+pub const HIT_OFFSET: f32 = 0.1;
 pub const LASER_WIDTH: f32 = 4.0;
 
 pub struct LaserPlugin;
@@ -89,13 +94,11 @@ fn aiming_system(
 ) {
     let (global_transform_cannon, transform_cannon) = query_cannon.single();
     let mut pos = global_transform_cannon.translation.xy() + transform_cannon.translation.xy();
-    let a = transform_cannon.rotation.to_axis_angle().1;
-    let a_cos = a.cos();
-    let a_sin = a.sin();
-    let mut dir = Vec2::new(a_cos * 1.0, a_sin * 1.0);
-    info!("{},{}", pos, dir);
+    let quat = transform_cannon.rotation.to_axis_angle();
+    let a = -1.0 * quat.0.z * quat.1;
+    let mut dir = Vec2::new(a.sin(), a.cos()).normalize();
 
-    let mut normal = None;
+    let mut normal = Vec2::ZERO;
 
     let mut search_collide = true;
 
@@ -105,34 +108,31 @@ fn aiming_system(
             laser.origin = pos;
             let mut min_distance_square = f32::MAX;
 
-            //find closest collide and sets Lasers start and end position;
+            //find closest collide and sets lasers start and end position;
             for (collider, collider_transform) in query_collider.iter() {
                 if let Some((hit, n)) = collider.ray_collide(collider_transform, pos, dir) {
-                    info!("JO");
                     let distance_squared = (hit - pos).length_squared();
                     if distance_squared < min_distance_square {
                         min_distance_square = distance_squared;
                         laser.destination = hit;
-                        normal = Some(n);
+                        normal = n;
                         search_collide = true;
                     }
                 }
             }
-        }
 
-        if search_collide == false {
-            laser.is_visible = false;
+            if search_collide == false {
+                laser.is_visible = true;
+                laser.destination = dir * MAX_LASER_LENGTH;
+            } else {
+                let a = normal.angle_between(dir);
+                let angle = 2.0 * a.abs() - std::f32::consts::PI;
+                pos = laser.destination - dir * HIT_OFFSET;
+                dir = Mat2::from_angle(-a.signum() * angle) * dir;
+                laser.is_visible = true;
+            }
         } else {
-            let n = normal.unwrap();
-            //TODO Move to other point
-            let a = n.angle_between(dir);
-
-            let a_cos = a.cos();
-            let a_sin = a.sin();
-
-            dir = Vec2::new(a_cos * dir.x - a_sin * dir.y, a_sin * dir.x + a_cos * dir.y);
-            pos = laser.destination;
-            laser.is_visible = true;
+            laser.is_visible = false;
         }
     }
 }
@@ -144,7 +144,7 @@ fn drawing_system(mut query: Query<(&Laser, &mut Transform, &mut Sprite, &mut Vi
             transform.translation = Vec3::new(pos.x, pos.y, 0.0);
             let dir = laser.destination - laser.origin;
             let angle = Vec2::Y.angle_between(dir);
-            transform.rotation = Quat::from_rotation_y(angle);
+            transform.rotation = Quat::from_rotation_z(angle);
 
             sprite.size = Vec2::new(LASER_WIDTH, dir.length());
 

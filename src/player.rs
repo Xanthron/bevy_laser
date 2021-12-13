@@ -8,7 +8,8 @@ use crate::{
     GameStateRes,
 };
 
-pub const MAX_ANGLE: f32 = PI / 3.0;
+pub const MAX_ANGLE: f32 = PI / 2.5;
+//pub const MAX_STEPS: f32 = (6.0) / 2.0;
 
 #[derive(Component)]
 pub struct Player;
@@ -123,6 +124,7 @@ pub fn cannon_mouse_rotation_system(
         let mut angle = Vec2::new(0.0, 1.0).angle_between(vec);
 
         if !angle.is_nan() {
+            //angle = ((angle / MAX_ANGLE * MAX_STEPS).floor() - 0.5) * (MAX_ANGLE / MAX_STEPS);
             angle = angle.clamp(-MAX_ANGLE, MAX_ANGLE);
 
             transform.rotation = Quat::from_rotation_z(angle);

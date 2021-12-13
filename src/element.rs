@@ -1,4 +1,4 @@
-use bevy::{ecs::schedule::ShouldRun, prelude::*};
+use bevy::{ecs::schedule::ShouldRun, prelude::*, render2::render_phase::TrackedRenderPass};
 use rand::prelude::*;
 
 use crate::{
@@ -13,39 +13,40 @@ pub struct ElementPlugin;
 impl Plugin for ElementPlugin {
     fn build(&self, app: &mut App) {
         //Spawn
-        app.add_system_set(
-            SystemSet::new()
-                .label(GenerateElementLabel::Main)
-                .with_run_criteria(run_if_generate_state)
-                .with_system(
-                    generate_next_elements_system
-                        .system()
-                        .label(GenerateElementLabel::Generate),
-                ),
-        )
-        .add_system_set(
-            SystemSet::new()
-                .label(SpawnElementLabel::Main)
-                .with_run_criteria(run_if_spawn_state)
-                .with_system(spawn_block_system.system().label(SpawnElementLabel::Spawn))
-                .with_system(
-                    spawn_powerup_laser_system
-                        .system()
-                        .label(SpawnElementLabel::Spawn),
-                )
-                .with_system(
-                    init_move_system
-                        .system()
-                        .label(SpawnElementLabel::InitMove)
-                        .after(SpawnElementLabel::Spawn),
-                ),
-        )
-        .add_system_set(
-            SystemSet::new()
-                .label(MoveElementLabel::Main)
-                .with_run_criteria(run_if_move_state)
-                .with_system(move_system.system().label(MoveElementLabel::Move)),
-        );
+        app.add_startup_system(startup_spawn_world_collider)
+            .add_system_set(
+                SystemSet::new()
+                    .label(GenerateElementLabel::Main)
+                    .with_run_criteria(run_if_generate_state)
+                    .with_system(
+                        generate_next_elements_system
+                            .system()
+                            .label(GenerateElementLabel::Generate),
+                    ),
+            )
+            .add_system_set(
+                SystemSet::new()
+                    .label(SpawnElementLabel::Main)
+                    .with_run_criteria(run_if_spawn_state)
+                    .with_system(spawn_block_system.system().label(SpawnElementLabel::Spawn))
+                    .with_system(
+                        spawn_powerup_laser_system
+                            .system()
+                            .label(SpawnElementLabel::Spawn),
+                    )
+                    .with_system(
+                        init_move_system
+                            .system()
+                            .label(SpawnElementLabel::InitMove)
+                            .after(SpawnElementLabel::Spawn),
+                    ),
+            )
+            .add_system_set(
+                SystemSet::new()
+                    .label(MoveElementLabel::Main)
+                    .with_run_criteria(run_if_move_state)
+                    .with_system(move_system.system().label(MoveElementLabel::Move)),
+            );
     }
 }
 
@@ -72,6 +73,18 @@ pub struct PowerupAddLaser;
 #[derive(Component)]
 pub struct Bounce;
 
+fn startup_spawn_world_collider(mut commands: Commands) {
+    commands
+        .spawn()
+        .insert(Collider::new(vec![
+            Vec2::new(WIDTH / 2.0, -HEIGHT / 2.0),
+            Vec2::new(WIDTH / 2.0, HEIGHT / 2.0),
+            Vec2::new(-WIDTH / 2.0, HEIGHT / 2.0),
+            Vec2::new(-WIDTH / 2.0, -HEIGHT / 2.0),
+        ]))
+        .insert(Transform::default());
+}
+
 //region [rgba(256,256,0,0.2)] Generate
 #[derive(Clone, Hash, Debug, PartialEq, Eq, SystemLabel)]
 pub enum GenerateElementLabel {
@@ -94,7 +107,7 @@ pub fn generate_next_elements_system(mut commands: Commands) {
     let bounce_probability = 0.1;
 
     let powerup_laser_position = rand::thread_rng().gen_range(1u8..(COLUMNS as u8));
-    info!("{}", powerup_laser_position);
+    info!("Powerup Laser pos {}", powerup_laser_position);
     for element in 0..(COLUMNS as u8) {
         let mut o_entity = None;
         if element == powerup_laser_position {
