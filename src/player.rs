@@ -4,8 +4,8 @@ use bevy::{ecs::schedule::ShouldRun, math::Vec3Swizzles, prelude::*};
 
 use crate::{
     click::{self, Clicked},
+    game_state::*,
     window::{get_3d_from_cord, COLUMNS, HEIGHT, ROWS, SIZE, SIZE_MULTIPLIER, WIDTH},
-    GameStateRes,
 };
 
 pub const MAX_ANGLE: f32 = PI / 2.5;
@@ -31,26 +31,24 @@ pub struct PossiblePositionsAnimation {
 #[derive(Component)]
 pub struct Cannon;
 
-pub struct MovementPlugin;
-impl Plugin for MovementPlugin {
+pub struct PlayerPlugin;
+impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(startup_system).add_system_set(
-            SystemSet::new()
-                .with_run_criteria(run_if_player_movement_state)
-                .with_system(cannon_mouse_rotation_system)
-                //.with_system(select_possible_position_system)
-                .with_system(animate_selected_possible_position_system)
-                .with_system(set_player_move_position_system)
-                .with_system(player_movement_system),
-        );
-    }
-}
-
-fn run_if_player_movement_state(game_state: Res<GameStateRes>) -> ShouldRun {
-    if game_state.eq(&GameStateRes::PlayerMovement) {
-        ShouldRun::Yes
-    } else {
-        ShouldRun::No
+        app.add_startup_system(startup_system)
+            .add_system_set(
+                SystemSet::new()
+                    .with_run_criteria(IS_AIMING_LASER_STATE)
+                    .with_system(cannon_mouse_rotation_system)
+                    //.with_system(select_possible_position_system)
+                    .with_system(animate_selected_possible_position_system)
+                    .with_system(set_player_move_position_system)
+                    .with_system(player_start_shoot_system),
+            )
+            .add_system_set(
+                SystemSet::new()
+                    .with_run_criteria(IS_MOVE_PLAYER_STATE)
+                    .with_system(player_movement_system),
+            );
     }
 }
 
@@ -71,7 +69,10 @@ pub fn startup_system(mut commands: Commands, mut materials: ResMut<Assets<Color
                 ..Default::default()
             })
             .insert(PossiblePositions)
-            .insert(click::Clickable { _active: true });
+            .insert(click::Clickable {
+                size: Vec2::new(SIZE, SIZE),
+                active: true,
+            });
     }
 
     //Player
@@ -165,6 +166,7 @@ pub fn animate_selected_possible_position_system(
 }
 
 pub fn player_movement_system(
+    mut game_state: ResMut<GameStateRes>,
     mut query: Query<(&mut Transform, &mut PlayerMoveAnimation)>,
     delta_time: Res<Time>,
 ) {
@@ -180,10 +182,13 @@ pub fn player_movement_system(
         } else {
             transform.translation += vec.normalize() * max_length;
         }
+    } else {
+        game_state.change(GameState::AimingLaser);
     }
 }
 
 pub fn set_player_move_position_system(
+    mut game_state: ResMut<GameStateRes>,
     mut commands: Commands,
     query_selectable: Query<(Entity, &Transform), (With<PossiblePositions>, With<Clicked>)>,
     mut query_player: Query<&mut PlayerMoveAnimation, With<Player>>,
@@ -195,5 +200,28 @@ pub fn set_player_move_position_system(
             (transform.translation.x, (-ROWS / 2.0 + 1.5) * SIZE, 2.0).into();
 
         commands.entity(entity).remove::<Clicked>();
+
+        game_state.change(GameState::MovePlayer);
+    }
+}
+
+pub fn player_start_shoot_system(
+    mut game_state: ResMut<GameStateRes>,
+    mouse_buttons: Res<Input<MouseButton>>,
+    windows: Res<Windows>,
+) {
+    if let Some(vec2) = windows
+        .get_primary()
+        .expect("no primary window")
+        .cursor_position()
+    {
+        if mouse_buttons.just_released(MouseButton::Left)
+            && vec2.x >= 0.0
+            && vec2.x <= WIDTH
+            && vec2.y >= SIZE * 3.0
+            && vec2.y <= HEIGHT
+        {
+            game_state.change(GameState::FireLaser);
+        }
     }
 }

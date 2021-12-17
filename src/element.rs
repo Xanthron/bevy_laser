@@ -3,8 +3,8 @@ use rand::prelude::*;
 
 use crate::{
     collider2d::{self, Collider},
+    game_state::*,
     window::{get_3d_from_cord, COLUMNS, HEIGHT, ROWS, SIZE, SIZE_MULTIPLIER, WIDTH},
-    GameStateRes,
 };
 
 //TODO Import Const
@@ -17,7 +17,7 @@ impl Plugin for ElementPlugin {
             .add_system_set(
                 SystemSet::new()
                     .label(GenerateElementLabel::Main)
-                    .with_run_criteria(run_if_generate_state)
+                    .with_run_criteria(IS_GENERATE_OBSTACLE_STATE)
                     .with_system(
                         generate_next_elements_system
                             .system()
@@ -27,7 +27,7 @@ impl Plugin for ElementPlugin {
             .add_system_set(
                 SystemSet::new()
                     .label(SpawnElementLabel::Main)
-                    .with_run_criteria(run_if_spawn_state)
+                    .with_run_criteria(IS_SPAWN_OBSTACLE_STATE)
                     .with_system(spawn_block_system.system().label(SpawnElementLabel::Spawn))
                     .with_system(
                         spawn_powerup_laser_system
@@ -44,7 +44,7 @@ impl Plugin for ElementPlugin {
             .add_system_set(
                 SystemSet::new()
                     .label(MoveElementLabel::Main)
-                    .with_run_criteria(run_if_move_state)
+                    .with_run_criteria(IS_MOVE_OBSTACLE_STATE)
                     .with_system(move_system.system().label(MoveElementLabel::Move)),
             );
     }
@@ -64,8 +64,9 @@ struct AnimationMoveDown {
 pub struct Block;
 // #[derive(Component)]
 // pub struct Triangle;
-// //pub struct Duble;
-// pub struct Live(i32);
+//pub struct Live;
+#[derive(Component)]
+pub struct Live(pub i32);
 
 #[derive(Component)]
 pub struct PowerupAddLaser;
@@ -92,15 +93,7 @@ pub enum GenerateElementLabel {
     Generate,
 }
 
-fn run_if_generate_state(game_state: Res<GameStateRes>) -> ShouldRun {
-    if game_state.eq(&GameStateRes::GenerateNext) {
-        ShouldRun::Yes
-    } else {
-        ShouldRun::No
-    }
-}
-
-pub fn generate_next_elements_system(mut commands: Commands) {
+pub fn generate_next_elements_system(mut commands: Commands, mut game_state: ResMut<GameStateRes>) {
     //TODO Move to spawn options
     let block_probability = 0.3;
     let triangle_probability = 0.1;
@@ -134,7 +127,7 @@ pub fn generate_next_elements_system(mut commands: Commands) {
         }
     }
 
-    commands.insert_resource(GameStateRes::SpawnNext);
+    game_state.change(GameState::SpawnObstacle);
 }
 //endregion
 
@@ -146,13 +139,6 @@ pub enum SpawnElementLabel {
     InitMove,
 }
 
-fn run_if_spawn_state(game_state: Res<GameStateRes>) -> ShouldRun {
-    if game_state.eq(&GameStateRes::SpawnNext) {
-        ShouldRun::Yes
-    } else {
-        ShouldRun::No
-    }
-}
 fn spawn_block_system(
     mut commands: Commands,
     query: Query<(Entity, &AnimationMoveDown), (With<Block>, Without<Transform>)>,
@@ -193,12 +179,15 @@ fn spawn_powerup_laser_system(
     }
 }
 
-fn init_move_system(mut commands: Commands, mut query: Query<&mut AnimationMoveDown>) {
+fn init_move_system(
+    mut game_state: ResMut<GameStateRes>,
+    mut query: Query<&mut AnimationMoveDown>,
+) {
     for mut animation_move_down in query.iter_mut() {
         animation_move_down.destination =
             animation_move_down.destination + Vec3::new(0.0, -SIZE, 0.0);
     }
-    commands.insert_resource(GameStateRes::MoveNext);
+    game_state.change(GameState::MoveObstacle);
 }
 //endregion
 
@@ -209,16 +198,8 @@ pub enum MoveElementLabel {
     Move,
 }
 
-fn run_if_move_state(game_state: Res<GameStateRes>) -> ShouldRun {
-    if game_state.eq(&GameStateRes::MoveNext) {
-        ShouldRun::Yes
-    } else {
-        ShouldRun::No
-    }
-}
-
 fn move_system(
-    mut commands: Commands,
+    mut game_state: ResMut<GameStateRes>,
     mut query: Query<(&mut Transform, &AnimationMoveDown)>,
     time: Res<Time>,
 ) {
@@ -237,7 +218,7 @@ fn move_system(
     }
 
     if !in_movement {
-        commands.insert_resource(GameStateRes::PlayerMovement);
+        game_state.change(GameState::AimingLaser);
     }
 }
 //endregion

@@ -34,7 +34,8 @@ impl Plugin for ClickablePlugin {
 //TODO Button Type
 #[derive(Component)]
 pub struct Clickable {
-    pub _active: bool,
+    pub size: Vec2,
+    pub active: bool,
 }
 
 #[derive(Component)]
@@ -60,16 +61,13 @@ enum ClickExecutionLabel {
 //FIXME Multiple Hovered components could be created
 fn hover_2d_system(
     mut commands: Commands,
-    query: Query<
-        (
-            Entity,
-            &GlobalTransform,
-            &Transform,
-            &Sprite,
-            Option<&Hovered>,
-        ),
-        With<Clickable>,
-    >,
+    query: Query<(
+        Entity,
+        &GlobalTransform,
+        &Transform,
+        &Clickable,
+        Option<&Hovered>,
+    )>,
     query_camera: Query<(&GlobalTransform, &OrthographicProjection), With<MainCamera>>,
     mut cursor_moved_event: EventReader<CursorMoved>,
 ) {
@@ -81,9 +79,16 @@ fn hover_2d_system(
 
             //FIXME Rotation and Scale not implemented
             //FIXME No blocking. Solution: Order query by z
-            for (entity, global_transform, _, sprite, o_hovered) in query.iter() {
+            let mut element_found = false;
+            let mut query_order = query.iter().collect::<Vec<_>>();
+            query_order.sort_by(|(_, a_global, a_local, ..), (_, b_global, b_local, ..)| {
+                let a = a_global.translation.z + a_local.translation.z;
+                let b = b_global.translation.z + b_local.translation.z;
+                a.partial_cmp(&b).unwrap()
+            });
+            for (entity, global_transform, _, clickable, o_hovered) in query_order.into_iter() {
                 let (x, y, _): (f32, f32, _) = global_transform.translation.into();
-                let (width, height) = sprite.size.into();
+                let (width, height) = clickable.size.into();
                 let rect = (
                     x - width / 2.0,
                     y - height / 2.0,
@@ -91,13 +96,16 @@ fn hover_2d_system(
                     y + height / 2.0,
                 );
 
-                if cursor_pos.x >= rect.0
+                if !element_found
+                    && clickable.active
+                    && cursor_pos.x >= rect.0
                     && cursor_pos.x <= rect.2
                     && cursor_pos.y >= rect.1
                     && cursor_pos.y <= rect.3
                 {
                     if !o_hovered.is_some() {
                         commands.entity(entity).insert(Hovered);
+                        element_found = true;
                     }
                 } else {
                     if o_hovered.is_some() {
